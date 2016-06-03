@@ -1,0 +1,9 @@
+#!/bin/sh
+export LOGPARSER="$(cd $(dirname "$0")/.. && pwd)"
+
+# ~4x faster under pypy (if available)
+if hash pypy 2>/dev/null; then
+    pypy $LOGPARSER/logparser/logparser.py $@
+else
+    exec $LOGPARSER/logparser/logparser.py $@
+fi
