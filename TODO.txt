@@ -1,1 +1,4 @@
 This file will contain a list of the functionality to add.
+
+--from-date, which is only to parse log events that are newer than specified date. Default is from the very beginning.
+--to-date, which is only to parse log events that are older than specified date. Default is to the current moment.
