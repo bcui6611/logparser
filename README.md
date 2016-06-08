@@ -8,15 +8,6 @@ Currently I can:-
  
 logparser requires either `pypy` or `python 2.7.x` to be installed. 
  
-For best performance it is recommended to install `pypy`.  See [pypy.org](http://pypy.org) for more details.  You will also need to install pypy versions of the tornado and lepl modules.  This can be achieved using `pip_pypy` or the pypy version of `easy_install`.  The install instructions for Mac (OSX) are:-
- 
-	/usr/local/share/pypy/easy_install tornado
-	/usr/local/share/pypy/easy_install lepl
-
-If you decide not to use pypy, then python 2.7.x can be used.  On Mac (OSX) the two extra modules can be installed as follows:-
- 
-    /usr/bin/easy_install tornado
-	/usr/bin/easy_install lepl
 	
 # How to Use
 
