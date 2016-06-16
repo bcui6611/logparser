@@ -27,7 +27,6 @@ from io import TextIOWrapper
 import cProfile, pstats, StringIO
 
 import globals
-import node_events
 import erlangParser
 
 """ This is the top level file for running LogParser.  It is responsible for loading the data

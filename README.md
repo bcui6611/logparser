@@ -15,7 +15,7 @@ logparser requires either `pypy` or `python 2.7.x` to be installed.
 
 To run logparser, simply type:-
 
-    ./logparser.sh
+    bin/logparser
     
 If pypy is installed, logparser will automatically use it, otherwise it will default to use the standard python intepreter.    
 

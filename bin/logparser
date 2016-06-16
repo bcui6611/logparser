@@ -5,5 +5,5 @@ export LOGPARSER="$(cd $(dirname "$0")/.. && pwd)"
 if hash pypy 2>/dev/null; then
     pypy $LOGPARSER/logparser/logparser.py $@
 else
-    exec $LOGPARSER/logparser/logparser.py $@
+    exec python2.7 $LOGPARSER/logparser/logparser.py $@
 fi
