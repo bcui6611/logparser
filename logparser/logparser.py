@@ -34,6 +34,18 @@ import erlangParser
     1) globals.py - contains the globals variables used by logparser
 """
 
+
+def bar(current, total):
+    if not total:
+        return '.'
+    cr = chr(27) + "[A\n"
+    pct = float(current) / total
+    max_hash = 20
+    num_hash = int(round(pct * max_hash))
+    return ("  [%s%s] %0.1f%% (%s/estimated %s msgs)%s" %
+            ('#' * num_hash, ' ' * (max_hash - num_hash),
+             100.0 * pct, current, total, cr))
+
 def argumentParsing():
     parser = argparse.ArgumentParser(description='LogParser')
     parser.add_argument(
@@ -42,6 +54,8 @@ def argumentParsing():
                         default=False, help='Enable debugging messages')
     parser.add_argument('--version',  action='store_true',
                         default=False, help='Prints out the version number of logparser')
+    parser.add_argument('-e', '--erlang', action='store_true',
+                        default=False, help='Enable anlyzing erlang messages')
 
     return parser.parse_args()
 
@@ -110,9 +124,12 @@ def isLogEvent(line):
         return 0, "", ""
 
 
-def stats_parse(bucketDictionary, zipfile, stats_file, filename, progress_queue):
+def stats_parse(bucketDictionary, zipfile, stats_file, filename, progress_queue, enable_doctor):
     try:
         with tarfile.open(stats_file, mode='r:gz') as tf:
+            count = 0
+            loop_page = 1000
+            loop_page_20 = 20 * loop_page
             bucket = None
             statsDictionary = None
             t = time.clock()
@@ -122,15 +139,24 @@ def stats_parse(bucketDictionary, zipfile, stats_file, filename, progress_queue)
             event_bucket = "@event"
             bucketDictionary[doctor_bucket] = []
             bucketDictionary[event_bucket] = []
+
+            logging.debug("Read total lines in logfile")
+            total = 0
+            for entry in tf.getnames():
+                total = sum(1 for line in tf.extractfile(entry))
+            logging.debug("Total line is:%s. Next will analyze logs line by line" % total)
             for entry in tf.getnames():
                 for line in tf.extractfile(entry):
+                    count += 1
+                    if count % loop_page == 0:
+                        sys.stderr.write(bar(count, total))
                     line = line.rstrip().lstrip()
                     if line != "":
                         if begin_stats:
                             if bucket:
                                 # Add to statsDictionary
                                 stats_kv(line, statsDictionary)
-                        elif doctor_start:
+                        elif enable_doctor and doctor_start:
                             doctor_data = doctor_data + line
                             if line.endswith("]}]}]\n"):
                                 doctor_start = False
@@ -164,17 +190,18 @@ def stats_parse(bucketDictionary, zipfile, stats_file, filename, progress_queue)
                                     bucketDictionary.get(event_bucket).append(eventDict)
                                     bucket = None
                                 else:
-                                    #check doctor stats
-                                    (node, epoch, head) = isNsDoctorStats(line)
-                                    if epoch != 0:
-                                        if not doctor_start:
-                                            doctor_start = True
-                                            statsDictionary = dict()
-                                            statsDictionary['localtime'] = epoch
-                                            statsDictionary['node'] = node
-                                            doctor_data = head + "\n"
-                                        else:
-                                            logging.error("unfinished line:" + doctor_data)
+                                    if enable_doctor:
+                                        #check doctor stats
+                                        (node, epoch, head) = isNsDoctorStats(line)
+                                        if epoch != 0:
+                                            if not doctor_start:
+                                                doctor_start = True
+                                                statsDictionary = dict()
+                                                statsDictionary['localtime'] = epoch
+                                                statsDictionary['node'] = node
+                                                doctor_data = head + "\n"
+                                            else:
+                                                logging.error("unfinished line:" + doctor_data)
                     else:
                         if begin_stats:
                             # reached an empty line
@@ -194,6 +221,7 @@ def stats_parse(bucketDictionary, zipfile, stats_file, filename, progress_queue)
                                 bucketDictionary.get(doctor_bucket).append(doctor_stats[key])
 
             process_time = time.clock() - t
+            print
             print "{}: Processing of stats took {} seconds".format(filename, process_time) 
     except KeyError:
         logging.error('Error: Cannot find log in' + stats_file + \
@@ -232,7 +260,7 @@ def load_collectinfo(filename, args, progress_queue, process_stats_queue):
 
     bucketDictionary = {}
     # Get the stats for this zip files and place in thread local storage.
-    stats_parse(bucketDictionary, file, stats_file, filename, progress_queue)
+    stats_parse(bucketDictionary, file, stats_file, filename, progress_queue, args.erlang)
 
     #Output to splunk friendly log format
     output_logfile(stats_file, bucketDictionary)
